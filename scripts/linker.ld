@@ -18,6 +18,8 @@ SECTIONS
         *(.text.reset)
         *(.text*)
         *(.rodata)
+        . = ALIGN(4);
+        _endflash = .;
     } > flash
 
     . = ALIGN(4);
