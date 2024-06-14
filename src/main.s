@@ -1,15 +1,20 @@
 .cpu cortex-m3
+.thumb
 
 .global reset_handler
 .global __initial_sp
 .global default_handler
 .global _start
+.global enable_led
 
 /* Define the stack top */
 .equ __initial_sp, 0x10008000
 
-/* Define LED Pin (onboard LED is on P1.18 or P1.28) */
-.equ LED_PIN, 18
+/* Define LED Pins */
+.equ LED1, 18 // GPIO1
+.equ LED2, 20 // GPIO1
+.equ LED3, 21 // Doesn't work on GP101 or GPIO2
+.equ LED4, 23 // Doesn't work on GP101 or GPIO2
 
 /* Define GPIO base and offsets */
 .equ LPC_GPIO_BASE, 0x2009C000
@@ -19,6 +24,31 @@
 .equ FIO1DIR, 0x00
 .equ FIO1SET, 0x18
 .equ FIO1CLR, 0x1C
+
+/* Main start function */
+.thumb_func
+.global _start
+_start:
+    // Load base address of GPIO1
+    LDR R0, =GPIO1_BASE
+    
+// Load pin for LED1 and LED2 and combine them
+LDR R1, =1 << LED1
+LDR R2, =1 << LED2
+ADD R1, R1, R2             // Combine bit masks for LED1 and LED2
+
+// Load pin for LED3 and LED4 and combine them
+LDR R2, =1 << LED3
+LDR R3, =1 << LED4
+ADD R2, R2, R3             // Combine bit masks for LED3 and LED4
+ADD R1, R1, R2             // Combine all LEDs bit masks
+
+    // Set the pin direction to output
+    LDR R2, [R0, #FIO1DIR]
+    ORR R2, R2, R1
+    STR R2, [R0, #FIO1DIR]
+    // Set the pins high
+    STR R1, [R0, #FIO1SET]
 
 /* Interrupt vector table */
 .section .isr_vector, "a", %progbits
@@ -77,8 +107,6 @@
 .word default_handler       /* USB Activity */
 .word default_handler       /* CAN Activity */
 
-.thumb
-
 /* Reset Handler */
 .section .text.reset, "ax", %progbits
 .thumb_func
@@ -90,23 +118,9 @@ reset_handler:
 /* Exception Handlers */
 .weak default_handler
 .type default_handler, %function
+.thumb_func
 default_handler:
     B .
-
-/* Main start function */
-.thumb_func
-.global _start
-_start:
-    LDR R0, =GPIO1_BASE
-    LDR R1, =1 << LED_PIN
-    LDR R2, [R0, #FIO1DIR]
-    ORR R2, R2, R1
-    STR R2, [R0, #FIO1DIR]
-
-    STR R1, [R0, #FIO1SET]
-
-loop:
-    B loop
 
 /* Data section */
 .data
